@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "STORAGE_CONNECTION": "<Storage-connection-string>",
+    "COMPUTER_VISION_SUBSCRIPTION_KEY": "<Cognitive-service-key>",
+    "COMPUTER_VISION_ENDPOINT": "<Cognitive-service-endpoint>",
+    "SQLDB_CONNECTION": "<SQL-connection-string>"
+  }
+}

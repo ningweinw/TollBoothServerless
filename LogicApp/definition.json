@@ -1,0 +1,167 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "BatchCSVHttpTrigger": {
+                "inputs": {
+                    "function": {
+                        "id": "<BatchCSVHttpTrigger-Function-Resource-ID>"
+                    },
+                    "method": "GET",
+                    "queries": {
+                        "numHours": 1,
+                        "startTime": "@variables('startTime')"
+                    }
+                },
+                "runAfter": {
+                    "Set_start_hour": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Function"
+            },
+            "Check_response_success": {
+                "actions": {
+                    "Check_CSV_record_number": {
+                        "actions": {
+                            "Send_an_email_(V2)_3": {
+                                "inputs": {
+                                    "body": {
+                                        "Body": "<p>BatchCSVHttpTrigger didn't generate CSV records<br>\nHTTP response:<br>\n@{body('BatchCSVHttpTrigger')}</p>",
+                                        "Subject": "GGR-Hackathon-LogicApp Error",
+                                        "To": "<Email-address>"
+                                    },
+                                    "host": {
+                                        "connection": {
+                                            "name": "@parameters('$connections')['office365']['connectionId']"
+                                        }
+                                    },
+                                    "method": "post",
+                                    "path": "/v2/Mail"
+                                },
+                                "runAfter": {},
+                                "type": "ApiConnection"
+                            }
+                        },
+                        "expression": {
+                            "and": [
+                                {
+                                    "less": [
+                                        "@body('Parse_JSON')?['numDbRecords']",
+                                        1
+                                    ]
+                                }
+                            ]
+                        },
+                        "runAfter": {
+                            "Parse_JSON": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "If"
+                    },
+                    "Parse_JSON": {
+                        "inputs": {
+                            "content": "@body('BatchCSVHttpTrigger')",
+                            "schema": {
+                                "properties": {
+                                    "numDbRecords": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "runAfter": {},
+                        "type": "ParseJson"
+                    }
+                },
+                "else": {
+                    "actions": {
+                        "Send_an_email_(V2)": {
+                            "inputs": {
+                                "body": {
+                                    "Body": "<p>Error in calling BatchCSVHttpTrigger<br>\nHTTP status code: @{outputs('BatchCSVHttpTrigger')['statusCode']}</p>",
+                                    "Subject": "GGR-Hackathon-LogicApp Error",
+                                    "To": "<Email-address>"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['office365']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/v2/Mail"
+                            },
+                            "runAfter": {},
+                            "type": "ApiConnection"
+                        }
+                    }
+                },
+                "expression": {
+                    "and": [
+                        {
+                            "equals": [
+                                "@outputs('BatchCSVHttpTrigger')['statusCode']",
+                                200
+                            ]
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "BatchCSVHttpTrigger": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "If"
+            },
+            "Set_start_hour": {
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "startTime",
+                            "type": "string",
+                            "value": "@{formatDateTime(startOfHour(utcNow()), 'yyyy-MM-ddTHH:mm:ss')}"
+                        }
+                    ]
+                },
+                "runAfter": {},
+                "type": "InitializeVariable"
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "Recurrence": {
+                "evaluatedRecurrence": {
+                    "frequency": "Hour",
+                    "interval": 1,
+                    "startTime": "2021-10-10T02:10:00Z"
+                },
+                "recurrence": {
+                    "frequency": "Hour",
+                    "interval": 1,
+                    "startTime": "2021-10-10T02:10:00Z"
+                },
+                "type": "Recurrence"
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "office365": {
+                    "connectionId": "<API-connection-ID>",
+                    "connectionName": "office365",
+                    "id": "/subscriptions/<Subscription-ID>/providers/Microsoft.Web/locations/<Location>/managedApis/office365"
+                }
+            }
+        }
+    }
+}
