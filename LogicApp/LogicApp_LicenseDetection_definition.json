@@ -1,0 +1,127 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "Check_incoming_file": {
+                "actions": {
+                    "Detect_OCR_Text": {
+                        "inputs": {
+                            "body": {
+                                "url": "https://<StorageAccount>.blob.core.windows.net@{triggerBody()?['Path']}"
+                            },
+                            "host": {
+                                "connection": {
+                                    "name": "@parameters('$connections')['cognitiveservicescomputervision']['connectionId']"
+                                }
+                            },
+                            "method": "post",
+                            "path": "/v3/subdomain/@{encodeURIComponent(encodeURIComponent('autoFilledSubdomain'))}/vision/v2.0/ocrtext",
+                            "queries": {
+                                "detectOrientation": true,
+                                "format": "Image URL",
+                                "language": "unk"
+                            }
+                        },
+                        "runAfter": {},
+                        "type": "ApiConnection"
+                    },
+                    "Insert_row_(V2)": {
+                        "inputs": {
+                            "body": {
+                                "boothid": 2,
+                                "capturetime": "@{utcNow()}",
+                                "imagefile": "@triggerBody()?['Name']",
+                                "platetext": "@body('Detect_OCR_Text')?['text']"
+                            },
+                            "host": {
+                                "connection": {
+                                    "name": "@parameters('$connections')['sql']['connectionId']"
+                                }
+                            },
+                            "method": "post",
+                            "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('default'))},@{encodeURIComponent(encodeURIComponent('default'))}/tables/@{encodeURIComponent(encodeURIComponent('[dbo].[VehiclePlate]'))}/items"
+                        },
+                        "runAfter": {
+                            "Detect_OCR_Text": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "ApiConnection"
+                    }
+                },
+                "expression": {
+                    "and": [
+                        {
+                            "equals": [
+                                "@triggerBody()?['MediaType']",
+                                "image/jpeg"
+                            ]
+                        }
+                    ]
+                },
+                "runAfter": {},
+                "type": "If"
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "When_a_blob_is_added_or_modified_(properties_only)_(V2)": {
+                "evaluatedRecurrence": {
+                    "frequency": "Second",
+                    "interval": 30
+                },
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azureblob']['connectionId']"
+                        }
+                    },
+                    "method": "get",
+                    "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('AccountNameFromSettings'))}/triggers/batch/onupdatedfile",
+                    "queries": {
+                        "checkBothCreatedAndModifiedDateTime": false,
+                        "folderId": "JTJmbGljZW5zZXBsYXRlLWltYWdl",
+                        "maxFileCount": 10
+                    }
+                },
+                "metadata": {
+                    "JTJmbGljZW5zZXBsYXRlLWltYWdl": "/licenseplate-image"
+                },
+                "recurrence": {
+                    "frequency": "Second",
+                    "interval": 30
+                },
+                "splitOn": "@triggerBody()",
+                "type": "ApiConnection"
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "azureblob": {
+                    "connectionId": "/subscriptions/<Subscription-ID>/resourceGroups/Demo-RG/providers/Microsoft.Web/connections/azureblob",
+                    "connectionName": "azureblob",
+                    "id": "/subscriptions/<Subscription-ID>/providers/Microsoft.Web/locations/northcentralus/managedApis/azureblob"
+                },
+                "cognitiveservicescomputervision": {
+                    "connectionId": "/subscriptions/<Subscription-ID>/resourceGroups/Demo-RG/providers/Microsoft.Web/connections/cognitiveservicescomputervision",
+                    "connectionName": "cognitiveservicescomputervision",
+                    "id": "/subscriptions/<Subscription-ID>/providers/Microsoft.Web/locations/northcentralus/managedApis/cognitiveservicescomputervision"
+                },
+                "sql": {
+                    "connectionId": "/subscriptions/<Subscription-ID>/resourceGroups/Demo-RG/providers/Microsoft.Web/connections/sql",
+                    "connectionName": "sql",
+                    "id": "/subscriptions/<Subscription-ID>/providers/Microsoft.Web/locations/northcentralus/managedApis/sql"
+                }
+            }
+        }
+    }
+}
